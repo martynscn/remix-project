@@ -12,6 +12,7 @@ function SourceLocationTracker (_codeManager) {
   this.event = new EventManager()
   this.sourceMappingDecoder = new SourceMappingDecoder()
   this.sourceMapByAddress = {}
+  this.generatedSourcesByAddress = {}
 }
 
 /**
@@ -25,7 +26,7 @@ function SourceLocationTracker (_codeManager) {
 SourceLocationTracker.prototype.getSourceLocationFromInstructionIndex = function (address, index, contracts) {
   return new Promise((resolve, reject) => {
     extractSourceMap(this, this.codeManager, address, contracts).then((sourceMap) => {
-      resolve(this.sourceMappingDecoder.atIndex(index, sourceMap))
+      resolve(this.sourceMappingDecoder.atIndex(index, sourceMap.map))
     }).catch(reject)
   })
 }
@@ -46,7 +47,7 @@ SourceLocationTracker.prototype.getSourceLocationFromVMTraceIndex = function (ad
           if (error) {
             reject(error)
           } else {
-            resolve(this.sourceMappingDecoder.atIndex(index, sourceMap))
+            resolve(this.sourceMappingDecoder.atIndex(index, sourceMap.map))
           }
         })
       } else {
@@ -56,8 +57,20 @@ SourceLocationTracker.prototype.getSourceLocationFromVMTraceIndex = function (ad
   })
 }
 
+/**
+ * Returns the generated sources from a specific @arg address
+ *
+ * @param {String} address - contract address from which has generated sources
+ * @param {Object} generatedSources - Object containing the sourceid, ast and the source code.
+ */
+SourceLocationTracker.prototype.getGeneratedSourcesFromAddress = function (address) {
+  if (this.generatedSourcesByAddress[address]) return this.generatedSourcesByAddress[address]
+  return null
+}
+
 SourceLocationTracker.prototype.clearCache = function () {
   this.sourceMapByAddress = {}
+  this.generatedSourcesByAddress = {}
 }
 
 function getSourceMap (address, code, contracts) {
@@ -71,7 +84,9 @@ function getSourceMap (address, code, contracts) {
 
       bytes = isCreation ? bytecode.object : deployedBytecode.object
       if (util.compareByteCode(code, '0x' + bytes)) {
-        return isCreation ? bytecode.sourceMap : deployedBytecode.sourceMap
+        const generatedSources = isCreation ? bytecode.generatedSources : deployedBytecode.generatedSources
+        const map = isCreation ? bytecode.sourceMap : deployedBytecode.sourceMap
+        return { generatedSources, map }
       }
     }
   }
@@ -79,14 +94,15 @@ function getSourceMap (address, code, contracts) {
 }
 
 function extractSourceMap (self, codeManager, address, contracts, cb) {
-  if (self.sourceMapByAddress[address]) return cb(null, self.sourceMapByAddress[address])
+  if (self.sourceMapByAddress[address]) return cb(null, { map: self.sourceMapByAddress[address], generatedSources: self.generatedSourcesByAddress[address] })
 
   codeManager.getCode(address, (error, result) => {
     if (!error) {
       const sourceMap = getSourceMap(address, result.bytecode, contracts)
       if (sourceMap) {
-        if (!helper.isContractCreation(address)) self.sourceMapByAddress[address] = sourceMap
-        cb(null, sourceMap)
+        if (!helper.isContractCreation(address)) self.sourceMapByAddress[address] = sourceMap.map
+        self.generatedSourcesByAddress[address] = sourceMap.generatedSources
+        cb(null, { map: sourceMap.map, generatedSources: sourceMap.generatedSources })
       } else {
         cb('no sourcemap associated with the code ' + address)
       }

@@ -72,12 +72,28 @@ class DebuggerUI {
       this.isActive = isActive
     })
 
-    this.debugger.event.register('newSourceLocation', async (lineColumnPos, rawLocation) => {
+    this.debugger.event.register('newSourceLocation', async (lineColumnPos, rawLocation, generatedSources) => {
       const contracts = await this.fetchContractAndCompile(
         this.currentReceipt.contractAddress || this.currentReceipt.to,
         this.currentReceipt)
       if (contracts) {
-        const path = contracts.getSourceName(rawLocation.file)
+        let path = contracts.getSourceName(rawLocation.file)
+        if (!path) {
+          // check in generated sources
+          for (const source of generatedSources) {
+            if (source.id === rawLocation.file) {
+              path = `.debugger/generated-sources/${source.name}`
+              let content
+              try {
+                content = await this.debuggerModule.call('fileManager', 'getFile', path, source.contents)
+              } catch (e) {}
+              if (content !== source.contents) {
+                await this.debuggerModule.call('fileManager', 'setFile', path, source.contents)
+              }
+              break
+            }
+          }
+        }
         if (path) {
           await this.debuggerModule.call('editor', 'discardHighlight')
           await this.debuggerModule.call('editor', 'highlight', lineColumnPos, path)
