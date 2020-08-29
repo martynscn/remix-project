@@ -32,24 +32,23 @@ class ContextManager {
     this.event.trigger('providerAdded', [type])
   }
 
-  switchProvider (type, cb) {
+  switchProvider(type, cb) {
     this.web3Providers.get(type, (error, obj) => {
       if (error) {
-        // console.log('provider ' + type + ' not defined')
-      } else {
-        this.web3 = obj
-        this.executionContext.detectNetwork((error, network) => {
-          if (error || !network) {
-            this.web3 = obj
-          } else {
-            var webDebugNode = init.web3DebugNode(network.name)
-            this.web3 = (!webDebugNode ? obj : webDebugNode)
-          }
-          this.event.trigger('providerChanged', [type, this.web3])
-          if (cb) return cb()
-        })
-        this.event.trigger('providerChanged', [type, this.web3])
+        return console.log('provider ' + type + ' not defined')
       }
+      this.web3 = obj
+      this.executionContext.detectNetwork((error, network) => {
+        if (error || !network) {
+          this.web3 = obj
+        } else {
+          var webDebugNode = init.web3DebugNode(network.name)
+          this.web3 = (!webDebugNode ? obj : webDebugNode)
+        }
+        this.event.trigger('providerChanged', [type, this.web3])
+        if (cb) return cb()
+      })
+      this.event.trigger('providerChanged', [type, this.web3])
     })
   }
 
