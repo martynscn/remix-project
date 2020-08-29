@@ -6,8 +6,8 @@ const TraceStepManager = require('./traceStepManager')
 const traceHelper = require('../helpers/traceHelper')
 const util = require('../util')
 
-function TraceManager (options) {
-  this.web3 = options.web3
+function TraceManager ({web3}) {
+  this.web3 = web3
   this.isLoading = false
   this.trace = null
   this.traceCache = new TraceCache()
