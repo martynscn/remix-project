@@ -1,7 +1,7 @@
 'use strict'
 const remixLib = require('@remix-project/remix-lib')
 const csjs = require('csjs-inject')
-const SourceMappingDecoder = remixLib.SourceMappingDecoder
+const {decode, nodesAtPosition} = remixLib.SourceMappingDecoder
 const AstWalker = remixLib.AstWalker
 const EventManager = require('../../lib/events')
 const globalRegistry = require('../../global/registry')
@@ -38,7 +38,6 @@ class ContextualListener extends Plugin {
     this._activeHighlights = []
     this.editor.event.register('contentChanged', () => { this._stopHighlighting() })
 
-    this.sourceMappingDecoder = new SourceMappingDecoder()
     this.astWalker = new AstWalker()
   }
 
@@ -86,7 +85,7 @@ class ContextualListener extends Plugin {
     this.currentPosition = cursorPosition
     this.currentFile = file
     if (compilationResult && compilationResult.data && compilationResult.data.sources[file]) {
-      const nodes = this.sourceMappingDecoder.nodesAtPosition(null, cursorPosition, compilationResult.data.sources[file])
+      const nodes = nodesAtPosition(null, cursorPosition, compilationResult.data.sources[file])
       this.nodes = nodes
       if (nodes && nodes.length && nodes[nodes.length - 1]) {
         this._highlightExpressions(nodes[nodes.length - 1], compilationResult)
@@ -116,7 +115,7 @@ class ContextualListener extends Plugin {
 
   _highlight (node, compilationResult) {
     if (!node) return
-    const position = this.sourceMappingDecoder.decode(node.src)
+    const position = decode(node.src)
     const eventId = this._highlightInternal(position, node)
     let lastCompilationResult = this._deps.compilersArtefacts['__last']
     if (eventId && lastCompilationResult && lastCompilationResult.languageversion.indexOf('soljson') === 0) {

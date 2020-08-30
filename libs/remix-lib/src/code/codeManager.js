@@ -2,7 +2,7 @@
 
 const EventManager = require('../eventManager')
 const traceHelper = require('../helpers/traceHelper')
-const SourceMappingDecoder = require('../sourceMappingDecoder')
+const {findNodeAtInstructionIndex} = require('../sourceMappingDecoder')
 const CodeResolver = require('./codeResolver')
 
 /*
@@ -124,7 +124,7 @@ CodeManager.prototype.getInstructionIndex = function (address, step) {
  */
 CodeManager.prototype.getFunctionFromPC = function (address, pc, sourceMap, ast) {
   const instIndex = this.codeResolver.getInstructionIndex(address, pc)
-  return SourceMappingDecoder.findNodeAtInstructionIndex('FunctionDefinition', instIndex, sourceMap, ast)
+  return findNodeAtInstructionIndex('FunctionDefinition', instIndex, sourceMap, ast)
 }
 
 function retrieveCodeAndTrigger (codeMananger, address, stepIndex, tx) {
